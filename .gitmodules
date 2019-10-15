@@ -1,0 +1,3 @@
+[submodule "libs/esp_idf"]
+	path = libs/esp_idf
+	url = https://github.com/espressif/ESP8266_RTOS_SDK.git
