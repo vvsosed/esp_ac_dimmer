@@ -14,15 +14,15 @@ set IDF_PATH=%~dp0
 set IDF_PATH=%IDF_PATH:~0,-4%libs\esp_idf
 echo Setting IDF_PATH to %IDF_PATH%
 
-rem C:\Program Files\xtensa-lx106-elf\bin
-rem C:\Program Files\mconf-v4.6.0.0-idf-20190628-win32
-rem 
-
 set OLD_PATH=%PATH%
 echo Old PATH=%PATH%
 set DEV_TOOLS_BIN_PATH=C:\Program Files\xtensa-lx106-elf\bin
 set CONF_TOOLS_PATH=C:\Program Files\mconf-v4.6.0.0-idf-20190628-win32
-set PATH=%DEV_TOOLS_BIN_PATH%;%CONF_TOOLS_PATH%;%IDF_PATH%;%PATH%
+rem set PYTHON_PATH=C:\Users\Vladimir\AppData\Local\Programs\Python\Python38-32
+rem set PYTHON_SCRIPT_PATH=C:\Users\Vladimir\AppData\Local\Programs\Python\Python38-32\Scripts
+set PYTHON_PATH=C:\Python27\
+set PYTHON_SCRIPT_PATH=C:\Python27\Scripts
+set PATH=%DEV_TOOLS_BIN_PATH%;%CONF_TOOLS_PATH%;%IDF_PATH%;%PYTHON_PATH%;%PYTHON_SCRIPT_PATH%;%PATH%
 echo New PATH=%PATH%
 
 cd build

@@ -2,8 +2,8 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-#set(CMAKE_CXX_STANDARD 14)
-#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #set(ENV{BUILD_ESP8266} 1)
 
@@ -15,15 +15,12 @@ cmake_minimum_required(VERSION 3.5)
 #set(IDF_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../lib/esp-idf)
 #set(ENV{IDF_PATH} D:/repo/esp_ac_dimmer/libs/esp_idf)
 
-#https://stackoverflow.com/questions/11390236/running-a-custom-command-in-cmake
-#add_custom_command(
-#OUTPUT vsphere.h
-#COMMAND wsdl2h -o vsphere.h vim25/vim.wsdl
-#)
-
-#add_custom_target(vsphere_header ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/vsphere.h) 
-
-#add_dependencies(soapC vsphere_header)
+add_custom_command(
+OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/components/common/include/FirmwareVersion.h
+COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/version.py --major 0 --minor 0 --build 1
+)
+add_custom_target(firmware_version ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/components/common/include/FirmwareVersion.h) 
+#add_dependencies(hello-world firmware_version)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(hello-world)
