@@ -14,6 +14,8 @@ set IDF_PATH=%~dp0
 set IDF_PATH=%IDF_PATH:~0,-4%libs\esp_idf
 echo Setting IDF_PATH to %IDF_PATH%
 
+set ESPPORT=COM5
+
 set OLD_PATH=%PATH%
 echo Old PATH=%PATH%
 set DEV_TOOLS_BIN_PATH=C:\Program Files\xtensa-lx106-elf\bin

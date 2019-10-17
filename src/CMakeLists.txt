@@ -25,9 +25,14 @@ add_custom_target(firmware_version ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/compo
 add_custom_target(monitor
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND python $ENV{IDF_PATH}/tools/idf.py monitor
-    #COMMAND echo -e "\texecuting a PRE_BUILD command"
     USES_TERMINAL
-	)
+    )
+    
+#add_custom_target(idf_flash
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+#    COMMAND python $ENV{IDF_PATH}/tools/idf.py -p COM5 -b 115200 flash
+#    USES_TERMINAL
+#	)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(hello-world)
