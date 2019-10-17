@@ -22,5 +22,12 @@ COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/version.py --major 0 --minor 0 --buil
 add_custom_target(firmware_version ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/components/common/include/FirmwareVersion.h) 
 #add_dependencies(hello-world firmware_version)
 
+add_custom_target(monitor
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND python $ENV{IDF_PATH}/tools/idf.py monitor
+    #COMMAND echo -e "\texecuting a PRE_BUILD command"
+    USES_TERMINAL
+	)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(hello-world)
