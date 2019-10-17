@@ -11,10 +11,13 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
+#include "utils.h"
 
 
-void app_main()
+extern "C" void app_main()
 {
+    common::print_firmware_info();
+
     printf("Hello world!\n");
 
     /* Print chip information */
