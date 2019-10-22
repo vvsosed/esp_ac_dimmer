@@ -14,8 +14,8 @@ namespace onewire {
 
 enum PinMode { INPUT, OUTPUT };
 enum IntMode { INTR_ON, INTR_OFF };
-using ReadPinValueClbk = std::function<bool()>;
 using SetPinModeClbk = std::function<void(const PinMode)>;
+using ReadPinValueClbk = std::function<bool()>;
 using SetPinValue = std::function<void(const bool)>;
 using SetIntrMode = std::function<void(const IntMode)>;
 using DelayMsecClbk = std::function<void(const uint32_t)>;

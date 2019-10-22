@@ -13,6 +13,8 @@
 #include "esp_spi_flash.h"
 #include "utils.h"
 
+#include "onewire.h"
+
 
 extern "C" void app_main()
 {
@@ -27,6 +29,37 @@ extern "C" void app_main()
 
     printf("silicon revision %d, ", chip_info.revision);
 
+    auto readOWPinClbk = []() -> bool {
+        return false;
+    };
+
+    auto setPinModeClbk = []( const onewire::PinMode pinMode ) {
+
+    };
+
+    auto setPinValueClbk = []( const bool pinValue ) {
+
+    };
+
+    auto setIntrModeClbk = [](const onewire::IntMode intrMode) {
+        if ( onewire::INTR_ON == intrMode ) {
+            //portENABLE_INTERRUPTS();
+        }
+        else {
+            //portDISABLE_INTERRUPTS();
+        }
+    };
+
+    auto delayMsecClbk = []( const uint32_t delayMsec ) {
+
+    };
+
+    onewire::OneWire ow_inst( setPinModeClbk,
+                              readOWPinClbk, 
+                              setPinValueClbk, 
+                              delayMsecClbk, 
+                              setIntrModeClbk );
+    
     printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
             (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
