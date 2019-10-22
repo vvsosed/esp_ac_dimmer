@@ -1,21 +1,36 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 
 #define ONEWIRE_SEARCH 1
 #define ONEWIRE_CRC 1
 #define ONEWIRE_CRC16 1
-#define IO_REG_TYPE uint32_t
-#define IO_REG_MASK_ATTR
-#define IO_REG_BASE_ATTR
+//#define IO_REG_TYPE uint32_t
+//#define IO_REG_MASK_ATTR
+//#define IO_REG_BASE_ATTR
 
 namespace onewire {
+
+enum PinMode { INPUT, OUTPUT };
+enum IntMode { INTR_ON, INTR_OFF };
+using ReadPinValueClbk = std::function<bool()>;
+using SetPinModeClbk = std::function<void(const PinMode)>;
+using SetPinValue = std::function<void(const bool)>;
+using SetIntrMode = std::function<void(const IntMode)>;
+using DelayMsecClbk = std::function<void(const uint32_t)>;
 
 class OneWire
 {
   private:
-    IO_REG_TYPE bitmask;
-    volatile IO_REG_TYPE *baseReg;
+    //IO_REG_TYPE bitmask;
+    //volatile IO_REG_TYPE *baseReg;
+
+    SetPinModeClbk m_setPinModeClbk;
+    ReadPinValueClbk m_readPinValueClbk;
+    SetPinValue m_setPinValueClbk;
+    DelayMsecClbk m_delayMsecClbk;
+    SetIntrMode m_setIntrModeClbk;
 
 #if ONEWIRE_SEARCH
     // global search state
@@ -26,9 +41,18 @@ class OneWire
 #endif
 
   public:
-    OneWire() { }
-    OneWire(uint8_t pin) { begin(pin); }
-    void begin(uint8_t pin);
+    OneWire( SetPinModeClbk setPinModeClbk,
+             ReadPinValueClbk readPinValueClbk,
+             SetPinValue setPinValueClbk,
+             DelayMsecClbk delayMsecClbk,
+             SetIntrMode setIntrModeClbk)
+    : m_setPinModeClbk(setPinModeClbk)
+    , m_readPinValueClbk(readPinValueClbk)
+    , m_setPinValueClbk(setPinValueClbk)
+    , m_delayMsecClbk(delayMsecClbk)
+    , m_setIntrModeClbk(setIntrModeClbk) { begin(); }
+    
+    void begin();
 
     // Perform a 1-Wire reset cycle. Returns 1 if a device responds
     // with a presence pulse.  Returns 0 if there is no device or the
@@ -128,6 +152,10 @@ class OneWire
     static uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc = 0);
 #endif
 #endif
+private:
+    inline void noInterrupts() { m_setIntrModeClbk(INTR_OFF); }
+
+    inline void interrupts() { m_setIntrModeClbk(INTR_ON); }
 };
 
 } // end of namespace onewire

@@ -1,64 +1,39 @@
-//#include <Arduino.h>
 #include "../include/onewire.h"
 
 namespace onewire {
 
 namespace {
-    enum PinMode { INPUT, OUTPUT };
+    //void pinMode(const uint8_t _pin, const PinMode _mode) { }
 
-    void pinMode(const uint8_t _pin, const PinMode _mode) {
-        // #TODO
-    }
+    //IO_REG_TYPE PIN_TO_BITMASK(const uint8_t _pin) {
+    //    // #TODO
+    //    return 0;
+    //}
 
-    IO_REG_TYPE PIN_TO_BITMASK(const uint8_t _pin) {
-        // #TODO
-        return 0;
-    }
+    //IO_REG_TYPE* PIN_TO_BASEREG(const uint8_t _pin) {
+    //    // #TODO
+    //    return nullptr;
+    //}
 
-    IO_REG_TYPE* PIN_TO_BASEREG(const uint8_t _pin) {
-        // #TODO
-        return nullptr;
-    }
+    //void DIRECT_MODE_INPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
 
-    void noInterrupts() {
+    //void DIRECT_MODE_OUTPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
 
-    }
+    //void DIRECT_WRITE_LOW( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
 
-    void interrupts() {
+    //void DIRECT_WRITE_HIGH( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
 
-    }
-
-	void DIRECT_MODE_INPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-
-    }
-
-    void DIRECT_MODE_OUTPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-
-    }
-
-    void DIRECT_WRITE_LOW( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-
-    }
-
-    void DIRECT_WRITE_HIGH( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-
-    }
-
-    void delayMicroseconds( const uint32_t _delay_msec) {
-
-    }
-
-    uint8_t DIRECT_READ( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-        return 0;
-    }
+    //uint8_t DIRECT_READ( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
+    //    return 0;
+    //}
 }
 
 
-void OneWire::begin(uint8_t pin)
+void OneWire::begin()
 {
-	pinMode(pin, INPUT);
-	bitmask = PIN_TO_BITMASK(pin);
-	baseReg = PIN_TO_BASEREG(pin);
+	m_setPinModeClbk(INPUT); //pinMode(pin, INPUT);
+	//bitmask = PIN_TO_BITMASK(pin);
+	//baseReg = PIN_TO_BASEREG(pin);
 #if ONEWIRE_SEARCH
 	reset_search();
 #endif
@@ -73,31 +48,31 @@ void OneWire::begin(uint8_t pin)
 //
 uint8_t OneWire::reset(void)
 {
-	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
+	//IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+	//volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t r;
 	uint8_t retries = 125;
 
 	noInterrupts();
-	DIRECT_MODE_INPUT(reg, mask);
+	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);
 	interrupts();
 	// wait until the wire is high... just in case
 	do {
 		if (--retries == 0) return 0;
-		delayMicroseconds(2);
-	} while ( !DIRECT_READ(reg, mask));
+		m_delayMsecClbk(2);
+	} while ( !m_readPinValueClbk() );//( !DIRECT_READ(reg, mask));
 
 	noInterrupts();
-	DIRECT_WRITE_LOW(reg, mask);
-	DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+	m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
+	m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
 	interrupts();
-	delayMicroseconds(480);
+	m_delayMsecClbk(480);
 	noInterrupts();
-	DIRECT_MODE_INPUT(reg, mask);	// allow it to float
-	delayMicroseconds(70);
-	r = !DIRECT_READ(reg, mask);
+	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);	// allow it to float
+	m_delayMsecClbk(70);
+	r = !m_readPinValueClbk(); //!DIRECT_READ(reg, mask);
 	interrupts();
-	delayMicroseconds(410);
+	m_delayMsecClbk(410);
 	return r;
 }
 
@@ -107,25 +82,25 @@ uint8_t OneWire::reset(void)
 //
 void OneWire::write_bit(uint8_t v)
 {
-	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
+	//IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+	//volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 
 	if (v & 1) {
 		noInterrupts();
-		DIRECT_WRITE_LOW(reg, mask);
-		DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
-		delayMicroseconds(10);
-		DIRECT_WRITE_HIGH(reg, mask);	// drive output high
+		m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
+		m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+		m_delayMsecClbk(10);
+		m_setPinValueClbk(true); //DIRECT_WRITE_HIGH(reg, mask);	// drive output high
 		interrupts();
-		delayMicroseconds(55);
+		m_delayMsecClbk(55);
 	} else {
 		noInterrupts();
-		DIRECT_WRITE_LOW(reg, mask);
-		DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
-		delayMicroseconds(65);
-		DIRECT_WRITE_HIGH(reg, mask);	// drive output high
+		m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
+		m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+		m_delayMsecClbk(65);
+		m_setPinValueClbk(true); //DIRECT_WRITE_HIGH(reg, mask);	// drive output high
 		interrupts();
-		delayMicroseconds(5);
+		m_delayMsecClbk(5);
 	}
 }
 
@@ -135,19 +110,19 @@ void OneWire::write_bit(uint8_t v)
 //
 uint8_t OneWire::read_bit(void)
 {
-	IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-	volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
+	//IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
+	//volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t r;
 
 	noInterrupts();
-	DIRECT_MODE_OUTPUT(reg, mask);
-	DIRECT_WRITE_LOW(reg, mask);
-	delayMicroseconds(3);
-	DIRECT_MODE_INPUT(reg, mask);	// let pin float, pull up will raise
-	delayMicroseconds(10);
-	r = DIRECT_READ(reg, mask);
+	m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);
+	m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
+	m_delayMsecClbk(3);
+	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);	// let pin float, pull up will raise
+	m_delayMsecClbk(10);
+	r = m_readPinValueClbk(); //DIRECT_READ(reg, mask);
 	interrupts();
-	delayMicroseconds(53);
+	m_delayMsecClbk(53);
 	return r;
 }
 
@@ -159,17 +134,15 @@ uint8_t OneWire::read_bit(void)
 // other mishap.
 //
 void OneWire::write(uint8_t v, uint8_t power /* = 0 */) {
-    uint8_t bitMask;
-
-    for (bitMask = 0x01; bitMask; bitMask <<= 1) {
-	OneWire::write_bit( (bitMask & v)?1:0);
-    }
-    if ( !power) {
-	noInterrupts();
-	DIRECT_MODE_INPUT(baseReg, bitmask);
-	DIRECT_WRITE_LOW(baseReg, bitmask);
-	interrupts();
-    }
+  for (uint8_t bitMask = 0x01; bitMask; bitMask <<= 1) {
+    OneWire::write_bit( (bitMask & v)? 1 : 0);
+  }
+  if ( !power) {
+	  noInterrupts();
+	  m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(baseReg, bitmask);
+	  m_setPinValueClbk(false); //DIRECT_WRITE_LOW(baseReg, bitmask);
+	  interrupts();
+  }
 }
 
 void OneWire::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 */) {
@@ -177,8 +150,8 @@ void OneWire::write_bytes(const uint8_t *buf, uint16_t count, bool power /* = 0 
     write(buf[i]);
   if (!power) {
     noInterrupts();
-    DIRECT_MODE_INPUT(baseReg, bitmask);
-    DIRECT_WRITE_LOW(baseReg, bitmask);
+    m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(baseReg, bitmask);
+    m_setPinValueClbk(false); //DIRECT_WRITE_LOW(baseReg, bitmask);
     interrupts();
   }
 }
@@ -224,7 +197,7 @@ void OneWire::skip()
 void OneWire::depower()
 {
 	noInterrupts();
-	DIRECT_MODE_INPUT(baseReg, bitmask);
+	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(baseReg, bitmask);
 	interrupts();
 }
 
