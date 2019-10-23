@@ -15,6 +15,9 @@
 
 #include "onewire.h"
 
+TickType_t  msecToSysTick( std::uint32_t xTimeInMs) {
+    return (TickType_t)xTimeInMs / portTICK_PERIOD_MS ;
+} 
 
 extern "C" void app_main()
 {
@@ -51,7 +54,7 @@ extern "C" void app_main()
     };
 
     auto delayMsecClbk = []( const uint32_t delayMsec ) {
-
+        vTaskDelay(msecToSysTick (delayMsec) );
     };
 
     onewire::OneWire ow_inst( setPinModeClbk,
