@@ -170,7 +170,7 @@ extern "C" void app_main()
             ESP_LOGI(__FUNCTION__, "Device is not a DS18x20 family device.");
         }
                 
-        /*if ( !ow_inst.reset() ) {
+        if ( !ow_inst.reset() ) {
             ESP_LOGW(__FUNCTION__, "1 Presence is absent!");
             continue;
         }
@@ -230,7 +230,7 @@ extern "C" void app_main()
 
         auto celsius = float(raw) / 16.0;
         auto fahrenheit = celsius * 1.8 + 32.0;
-        ESP_LOGI(__FUNCTION__, " Temperature: Celsius=%0.2f Fahrenheit=%0.2f\n", celsius, fahrenheit);*/
+        ESP_LOGI(__FUNCTION__, " Temperature: Celsius=%0.2f Fahrenheit=%0.2f\n", celsius, fahrenheit);
     }
 
     ESP_LOGI(TAG, "Restarting now...");
