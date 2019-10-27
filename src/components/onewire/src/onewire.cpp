@@ -48,12 +48,9 @@ void OneWire::begin()
 //
 uint8_t OneWire::reset(void)
 {
-	//IO_REG_TYPE mask IO_REG_MASK_ATTR = bitmask;
-	//volatile IO_REG_TYPE *reg IO_REG_BASE_ATTR = baseReg;
 	uint8_t r;
 	uint8_t retries = 125;
-
-	noInterrupts();
+   noInterrupts();
 	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);
 	interrupts();
 	// wait until the wire is high... just in case
@@ -66,14 +63,40 @@ uint8_t OneWire::reset(void)
 	m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
 	m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
 	interrupts();
-	m_delayMsecClbk(480);
+	m_delayMsecClbk(500); // 480 minimum
 	noInterrupts();
 	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);	// allow it to float
-	m_delayMsecClbk(70);
-	r = !m_readPinValueClbk(); //!DIRECT_READ(reg, mask);
-	interrupts();
-	m_delayMsecClbk(410);
-	return r;
+	
+   //m_delayMsecClbk(70);
+   retries = 1000 / 2;
+   do {
+		if (--retries == 0) return 0;
+		m_delayMsecClbk(2);
+	} while ( !m_readPinValueClbk() );
+
+   do {
+		if (--retries == 0) return 0;
+		m_delayMsecClbk(2);
+	} while ( m_readPinValueClbk() );
+
+   do {
+		if (--retries == 0) return 0;
+		m_delayMsecClbk(2);
+	} while ( !m_readPinValueClbk() );
+
+	/*r = !m_readPinValueClbk(); //!DIRECT_READ(reg, mask);
+   retries = (480 - 70) / 20;
+   while(!r && retries-- > 0) {
+      m_delayMsecClbk(10);
+      r = !m_readPinValueClbk();
+   }*/
+
+   interrupts();
+	//m_delayMsecClbk(410); //m_delayMsecClbk(410);
+	//return r;
+
+   m_delayMsecClbk(2 * retries);
+   return 1;
 }
 
 //
