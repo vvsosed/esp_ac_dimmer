@@ -57,7 +57,8 @@ class OneWire
     // Perform a 1-Wire reset cycle. Returns 1 if a device responds
     // with a presence pulse.  Returns 0 if there is no device or the
     // bus is shorted or otherwise held low for more than 250uS
-    uint8_t reset(void);
+    bool reset(void);
+    bool reset2(void);
 
     // Issue a 1-Wire rom select command, you do the reset first.
     void select(const uint8_t rom[8]);

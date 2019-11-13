@@ -1,33 +1,90 @@
 #include "../include/onewire.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+#include "driver/hw_timer.h"
+
 namespace onewire {
 
 namespace {
-    //void pinMode(const uint8_t _pin, const PinMode _mode) { }
+   const auto ResetPulseUs = 500;
+   const auto ResetTimeUs = 1200 - ResetPulseUs;
+   const auto ResetStepUs = 10;
 
-    //IO_REG_TYPE PIN_TO_BITMASK(const uint8_t _pin) {
-    //    // #TODO
-    //    return 0;
-    //}
+   struct ResetTmrContext {
+      enum Stage {
+         Stage1,
+         Stage2,
+         Stage3,
+         Stage4,
+         Stage5,
+         Stage6,
 
-    //IO_REG_TYPE* PIN_TO_BASEREG(const uint8_t _pin) {
-    //    // #TODO
-    //    return nullptr;
-    //}
+         StageSuccess,
+         StageFailed,
+      } state = Stage1;
+      unsigned int retries = ResetTimeUs / ResetStepUs,
+                   delayRetries = 0;
+      bool isPrecence = false;
+      ReadPinValueClbk m_readPinValueClbk = nullptr;
+      SetPinValue m_setPinValueClbk = nullptr;
+      SetPinModeClbk m_setPinModeClbk = nullptr;
+   };
 
-    //void DIRECT_MODE_INPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
+   void ResetTmrClbk( ResetTmrContext *ctx ) {
+      switch (ctx->state) {
+      case ResetTmrContext::Stage1: // wait until the wire is high... just in case
+         if ( !ctx->m_readPinValueClbk() ) {
+            break;
+         }
+         ctx->m_setPinValueClbk(false);
+	      ctx->m_setPinModeClbk(OUTPUT); // drive output low
+         ctx->delayRetries = ResetPulseUs / ResetStepUs;
+         ctx->state = ResetTmrContext::Stage2;
+         // fall throught
+      case ResetTmrContext::Stage2: // keep low to make MASTER RESET PULSE
+         if (--ctx->delayRetries > 0) {
+            break;
+         }
+         ctx->m_setPinModeClbk(INPUT); // allow it to float
+         ctx->state = ResetTmrContext::Stage3;
+         // fall throught
+      case ResetTmrContext::Stage3: // wait until hight pin value
+         if (!ctx->m_readPinValueClbk()) {
+            break;
+         }
+         ctx->state = ResetTmrContext::Stage4;
+         // fall throught
+      case ResetTmrContext::Stage4: // wait until low pin value
+         if (ctx->m_readPinValueClbk()) {
+            break;
+         }
+         ctx->isPrecence = true;
+         ctx->state = ResetTmrContext::Stage5; 
+         // fall throught
+      case ResetTmrContext::Stage5: // wait until hight pin value
+         if (!ctx->m_readPinValueClbk()) {
+            break;
+         }
+         ctx->state = ResetTmrContext::Stage6;
+         // fall throught
+      case ResetTmrContext::Stage6:
+         if ( 1 < ctx->retries ) {
+            break;
+         }
+         ctx->state = ResetTmrContext::StageSuccess;
+         // fall throught
+      default:
+         return;
+      }
 
-    //void DIRECT_MODE_OUTPUT( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
+      if (--ctx->retries == 0) {
+         ctx->state = ResetTmrContext::StageFailed;
+      }
+} // end of void ResetTmrClbk( ResetTmrContext *ctx )
 
-    //void DIRECT_WRITE_LOW( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
-
-    //void DIRECT_WRITE_HIGH( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) { }
-
-    //uint8_t DIRECT_READ( volatile IO_REG_TYPE *reg, const IO_REG_TYPE mask) {
-    //    return 0;
-    //}
-}
-
+} // end of private namespace
 
 void OneWire::begin()
 {
@@ -46,49 +103,66 @@ void OneWire::begin()
 //
 // Returns 1 if a device asserted a presence pulse, 0 otherwise.
 //
-uint8_t OneWire::reset(void)
+bool OneWire::reset(void)
 {
-	uint8_t r;
-   const auto ResetPulseUs = 500;
-   const auto ResetTimeUs = 1200 - ResetPulseUs;
-   const auto StepDelayUs = 2;
-	unsigned int retries = ResetTimeUs / StepDelayUs;
+	auto retries = ResetTimeUs / ResetStepUs;
    noInterrupts();
-	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);
+	m_setPinModeClbk(INPUT);
 	interrupts();
 	// wait until the wire is high... just in case
 	do {
-		if (--retries == 0) return 0;
-		m_delayMsecClbk(StepDelayUs);
-	} while ( !m_readPinValueClbk() );//( !DIRECT_READ(reg, mask));
+		if (--retries == 0) return false;
+		m_delayMsecClbk(ResetStepUs);
+	} while ( !m_readPinValueClbk() );
 
 	noInterrupts();
-	m_setPinValueClbk(false); //DIRECT_WRITE_LOW(reg, mask);
-	m_setPinModeClbk(OUTPUT); //DIRECT_MODE_OUTPUT(reg, mask);	// drive output low
+	m_setPinValueClbk(false);
+	m_setPinModeClbk(OUTPUT); // drive output low
 	interrupts();
 	m_delayMsecClbk(ResetPulseUs); // 480 minimum
 	noInterrupts();
-	m_setPinModeClbk(INPUT); //DIRECT_MODE_INPUT(reg, mask);	// allow it to float
+	m_setPinModeClbk(INPUT); // allow it to float
 	
    do {
-		if (--retries == 0) return 0;
+		if (--retries == 0) return false;
 		m_delayMsecClbk(2);
 	} while ( !m_readPinValueClbk() );
 
    do {
-		if (--retries == 0) return 0;
+		if (--retries == 0) return false;
 		m_delayMsecClbk(2);
 	} while ( m_readPinValueClbk() );
 
    do {
-		if (--retries == 0) return 0;
+		if (--retries == 0) return false;
 		m_delayMsecClbk(2);
 	} while ( !m_readPinValueClbk() );
 
 	interrupts();
-	m_delayMsecClbk(2 * retries);
+	m_delayMsecClbk(ResetStepUs * retries);
    
-   return 1;
+   return true;
+}
+
+bool OneWire::reset2(void)
+{
+   ResetTmrContext ctx;
+   ctx.m_readPinValueClbk = m_readPinValueClbk;
+   ctx.m_setPinValueClbk = m_setPinValueClbk;
+   ctx.m_setPinModeClbk = m_setPinModeClbk;
+   hw_timer_init(reinterpret_cast<hw_timer_callback_t>(ResetTmrClbk), &ctx);
+   bool isReload = true;
+   hw_timer_alarm_us(ResetStepUs, isReload);
+   
+   volatile auto& state = ctx.state;
+   const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
+   while(ResetTmrContext::StageFailed != state || 
+         ResetTmrContext::StageSuccess != state) {
+      vTaskDelay( xDelay250ms );
+   }
+   hw_timer_deinit();
+
+   return ctx.isPrecence;
 }
 
 //

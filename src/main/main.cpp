@@ -1,11 +1,3 @@
-/* Hello World Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <stdio.h>
 #include <future>
 
@@ -20,13 +12,6 @@
 
 #include "utils.h"
 #include "onewire.h"
-
-//#define xt_disable_interrupts(state, level) __asm__ __volatile__("rsil %%0," __STRINGIFY(level) : "=a" (state))
-//#define xt_enable_interrupts(state)  __asm__ __volatile__("wsr %%0,ps; isync" :: "a" (state) : "memory")
-
-//uint32_t interruptsState;
-//#define interrupts() xt_enable_interrupts(interruptsState)
-//#define noInterrupts() __asm__ __volatile__("rsil %%0,15" : "=a" (interruptsState))
 
 namespace {
 
@@ -48,29 +33,6 @@ void gpio_task_example(void *arg)
         gpio_set_level(LedPin, cnt % 2);
     }
 }
-
-/*#define NOP() asm volatile ("nop")
-
-unsigned long IRAM_ATTR micros()
-{
-    return (unsigned long) (esp_timer_get_time());
-}
-
-void IRAM_ATTR delayMicroseconds(uint32_t us)
-{
-    uint32_t m = micros();
-    if(us){
-        uint32_t e = (m + us);
-        if(m > e){ //overflow
-            while(micros() > e){
-                NOP();
-            }
-        }
-        while(micros() < e){
-            NOP();
-        }
-    }
-}*/
 
 } // end of private namespace
 
