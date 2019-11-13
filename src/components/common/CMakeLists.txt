@@ -1,3 +1,5 @@
-idf_component_register(SRCS "src/utils.cpp"
-                    INCLUDE_DIRS "include"
-                    PRIV_REQUIRES spi_flash)
+set(COMPONENT_SRCS "src/utils.cpp")
+set(COMPONENT_ADD_INCLUDEDIRS "include")
+set(COMPONENT_PRIV_REQUIRES "spi_flash")
+
+register_component()

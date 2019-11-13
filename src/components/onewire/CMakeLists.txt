@@ -1,2 +1,4 @@
-idf_component_register(SRCS "src/onewire.cpp"
-                       INCLUDE_DIRS "include")
+set(COMPONENT_SRCS "src/onewire.cpp")
+set(COMPONENT_ADD_INCLUDEDIRS "include")
+
+register_component()
