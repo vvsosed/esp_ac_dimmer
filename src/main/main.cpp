@@ -78,8 +78,9 @@ extern "C" void app_main()
     auto delayMsecClbk = []( const uint32_t delayMsec ) {
         //os_delay_us(delayMsec);
         //delayMicroseconds(delayMsec);
-        auto tp = esp_timer_get_time();
-        while ( delayMsec > esp_timer_get_time() - tp ) {}
+        os_delay_us(delayMsec);
+        //auto tp = esp_timer_get_time();
+        //while ( delayMsec > esp_timer_get_time() - tp ) {}
     };
 
     xTaskCreate(gpio_task_example, "gpio_task_example", 1024, NULL, 10, NULL);
