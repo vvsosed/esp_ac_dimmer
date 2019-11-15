@@ -34,13 +34,28 @@ void gpio_task_example(void *arg)
     }
 }
 
+void IRAM_ATTR setIntrModeClbk (const onewire::IntMode intrMode) {};
+
+bool IRAM_ATTR readOWPinClbk() {
+    return  gpio_get_level(OWPin);
+};
+
+
+void IRAM_ATTR setPinModeClbk( const onewire::PinMode pinMode ) {
+    gpio_set_direction(OWPin, onewire::PinMode::OUTPUT == pinMode ? GPIO_MODE_OUTPUT_OD : GPIO_MODE_INPUT);
+};
+
+void IRAM_ATTR setPinValueClbk( const bool pinValue ) {
+    gpio_set_level(OWPin, pinValue);
+};
+
 } // end of private namespace
 
 extern "C" void app_main()
 {
     common::print_firmware_info();
     
-    gpio_config_t io_conf;
+    gpio_config_t io_conf;    
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
     io_conf.pin_bit_mask = InitialPinMask;
@@ -48,46 +63,11 @@ extern "C" void app_main()
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
 
-    auto readOWPinClbk = []() -> bool {
-        return  gpio_get_level(OWPin);
-    };
-
-    auto setPinModeClbk = [&io_conf]( const onewire::PinMode pinMode ) {
-        gpio_set_direction(OWPin, onewire::PinMode::OUTPUT == pinMode ? GPIO_MODE_OUTPUT_OD : GPIO_MODE_INPUT);
-    };
-
-    auto setPinValueClbk = []( const bool pinValue ) {
-        gpio_set_level(OWPin, pinValue);
-    };
-
-    auto setIntrModeClbk = [](const onewire::IntMode intrMode) {
-        if ( onewire::INTR_ON == intrMode ) {
-            //portENABLE_INTERRUPTS();
-            //taskENABLE_INTERRUPTS();
-            //interrupts();
-            //vPortExitCritical();
-        }
-        else {
-            //portDISABLE_INTERRUPTS();
-            //taskDISABLE_INTERRUPTS();
-            //noInterrupts();
-            //vPortEnterCritical();
-        }
-    };
-
-    auto delayMsecClbk = []( const uint32_t delayMsec ) {
-        //os_delay_us(delayMsec);
-        //delayMicroseconds(delayMsec);
-        os_delay_us(delayMsec);
-        //auto tp = esp_timer_get_time();
-        //while ( delayMsec > esp_timer_get_time() - tp ) {}
-    };
-
     xTaskCreate(gpio_task_example, "gpio_task_example", 1024, NULL, 10, NULL);
     onewire::OneWire ow_inst( setPinModeClbk,
                               readOWPinClbk, 
                               setPinValueClbk, 
-                              delayMsecClbk, 
+                              ets_delay_us, 
                               setIntrModeClbk );
 
     
@@ -140,7 +120,7 @@ extern "C" void app_main()
         ow_inst.select(addr);
         ow_inst.write(0x44, 1);        // start conversion, with parasite power on at the end
         
-        delayMsecClbk(750);     // maybe 750ms is enough, maybe not
+        vTaskDelay( msecToSysTick(750) );     // maybe 750ms is enough, maybe not
         // we might do a ds.depower() here, but the reset will take care of it.
         
         if ( !ow_inst.reset() ) {
