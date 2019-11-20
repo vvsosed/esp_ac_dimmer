@@ -1,0 +1,21 @@
+menu "Netio Component Configuration"
+
+config WIFI_SSID
+    string "WiFi SSID"
+    default "myssid"
+    help
+        SSID (network name) for the example to connect to.
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+    default "mypassword"
+    help
+        WiFi password (WPA or WPA2) for the example to use.
+        Can be left blank if the network has no security set.
+
+config MAX_STA_CONN
+    int "Max number of connected clients in STA mode"
+    range 1 5
+    default 2
+
+endmenu

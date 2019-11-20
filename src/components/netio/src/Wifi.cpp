@@ -4,12 +4,13 @@
 
 #include <esp_log.h>
 #include <esp_wifi.h>
+#include <sdkconfig.h>
 
 #include <cstring>
 
-#define EXAMPLE_ESP_WIFI_SSID "CONFIG_ESP_WIFI_SSID"
-#define EXAMPLE_ESP_WIFI_PASS "CONFIG_ESP_WIFI_PASSWORD"
-#define EXAMPLE_MAX_STA_CONN  5 //CONFIG_MAX_STA_CONN
+#define EXAMPLE_ESP_WIFI_SSID CONFIG_WIFI_SSID
+#define EXAMPLE_ESP_WIFI_PASS CONFIG_WIFI_PASSWORD
+#define EXAMPLE_MAX_STA_CONN  CONFIG_MAX_STA_CONN
 
 namespace wifi {
 
