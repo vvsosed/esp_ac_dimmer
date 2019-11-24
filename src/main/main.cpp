@@ -104,14 +104,16 @@ extern "C" void app_main()
     for (int indx = 1; true; indx++) {
         vTaskDelay( msecToSysTick(500) );
         
-        std::uint8_t addr[8];
-        if ( !ow_inst.search(addr) ) {
+        onewire::RegisterNumber regNum;
+        std::uint8_t *addr = regNum.romData;
+        
+        if ( !ow_inst.search(regNum.romData) ) {
             ESP_LOGI(__FUNCTION__, "No more addresses.\n\n\n");
             ow_inst.reset_search();
             continue;
         }
         
-        if (onewire::OneWire::crc8(addr, 7) != addr[7]) {
+        if ( !regNum.isCrcValid() ) {
             ESP_LOGE(__FUNCTION__, "CRC is not valid!");
             continue;
         }
@@ -162,8 +164,8 @@ extern "C" void app_main()
         for ( int i = 0; i < sizeof(data); i++) 
             data[i] = ow_inst.read();
         
-        if (onewire::OneWire::crc8(data, 8) != data[8]) {
-            ESP_LOGI(__FUNCTION__, "Bad Data CRC: (calc=0x%X) != (receiv=0x%X)\n", onewire::OneWire::crc8(data, 8), data[8]);
+        if (onewire::crc8(data, 8) != data[8]) {
+            ESP_LOGI(__FUNCTION__, "Bad Data CRC: (calc=0x%X) != (receiv=0x%X)\n", onewire::crc8(data, 8), data[8]);
             continue;
         }
                

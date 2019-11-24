@@ -12,78 +12,6 @@ namespace {
    const auto ResetTimeUs = 1200 - ResetPulseUs;
    const auto ResetStepUs = 10;
 
-   struct ResetTmrContext {
-      enum Stage {
-         Stage1,
-         Stage2,
-         Stage3,
-         Stage4,
-         Stage5,
-         Stage6,
-
-         StageSuccess,
-         StageFailed,
-      } state = Stage1;
-      unsigned int retries = ResetTimeUs / ResetStepUs,
-                   delayRetries = 0;
-      bool isPrecence = false;
-      ReadPinValueClbk m_readPinValueClbk = nullptr;
-      SetPinValue m_setPinValueClbk = nullptr;
-      SetPinModeClbk m_setPinModeClbk = nullptr;
-   };
-
-   void ResetTmrClbk( ResetTmrContext *ctx ) {
-      switch (ctx->state) {
-      case ResetTmrContext::Stage1: // wait until the wire is high... just in case
-         if ( !ctx->m_readPinValueClbk() ) {
-            break;
-         }
-         ctx->m_setPinValueClbk(false);
-	      ctx->m_setPinModeClbk(OUTPUT); // drive output low
-         ctx->delayRetries = ResetPulseUs / ResetStepUs;
-         ctx->state = ResetTmrContext::Stage2;
-         // fall throught
-      case ResetTmrContext::Stage2: // keep low to make MASTER RESET PULSE
-         if (--ctx->delayRetries > 0) {
-            break;
-         }
-         ctx->m_setPinModeClbk(INPUT); // allow it to float
-         ctx->state = ResetTmrContext::Stage3;
-         // fall throught
-      case ResetTmrContext::Stage3: // wait until hight pin value
-         if (!ctx->m_readPinValueClbk()) {
-            break;
-         }
-         ctx->state = ResetTmrContext::Stage4;
-         // fall throught
-      case ResetTmrContext::Stage4: // wait until low pin value
-         if (ctx->m_readPinValueClbk()) {
-            break;
-         }
-         ctx->isPrecence = true;
-         ctx->state = ResetTmrContext::Stage5; 
-         // fall throught
-      case ResetTmrContext::Stage5: // wait until hight pin value
-         if (!ctx->m_readPinValueClbk()) {
-            break;
-         }
-         ctx->state = ResetTmrContext::Stage6;
-         // fall throught
-      case ResetTmrContext::Stage6:
-         if ( 1 < ctx->retries ) {
-            break;
-         }
-         ctx->state = ResetTmrContext::StageSuccess;
-         // fall throught
-      default:
-         return;
-      }
-
-      if (--ctx->retries == 0) {
-         ctx->state = ResetTmrContext::StageFailed;
-      }
-} // end of void ResetTmrClbk( ResetTmrContext *ctx )
-
 } // end of private namespace
 
 void OneWire::begin()
@@ -142,27 +70,6 @@ bool OneWire::reset(void)
 	m_delayMsecClbk(ResetStepUs * retries);
    
    return true;
-}
-
-bool OneWire::reset2(void)
-{
-   ResetTmrContext ctx;
-   ctx.m_readPinValueClbk = m_readPinValueClbk;
-   ctx.m_setPinValueClbk = m_setPinValueClbk;
-   ctx.m_setPinModeClbk = m_setPinModeClbk;
-   hw_timer_init(reinterpret_cast<hw_timer_callback_t>(ResetTmrClbk), &ctx);
-   bool isReload = true;
-   hw_timer_alarm_us(ResetStepUs, isReload);
-   
-   volatile auto& state = ctx.state;
-   const TickType_t xDelay250ms = pdMS_TO_TICKS( 250 );
-   while(ResetTmrContext::StageFailed != state || 
-         ResetTmrContext::StageSuccess != state) {
-      vTaskDelay( xDelay250ms );
-   }
-   hw_timer_deinit();
-
-   return ctx.isPrecence;
 }
 
 //
@@ -474,7 +381,7 @@ static const uint8_t PROGMEM dscrc2x16_table[] = {
 
 // Compute a Dallas Semiconductor 8 bit CRC. These show up in the ROM
 // and the registers.  (Use tiny 2x16 entry CRC table)
-uint8_t OneWire::crc8(const uint8_t *addr, uint8_t len)
+uint8_t crc8(const uint8_t *addr, uint8_t len)
 {
 	uint8_t crc = 0;
 
@@ -491,7 +398,7 @@ uint8_t OneWire::crc8(const uint8_t *addr, uint8_t len)
 // Compute a Dallas Semiconductor 8 bit CRC directly.
 // this is much slower, but a little smaller, than the lookup table.
 //
-uint8_t OneWire::crc8(const uint8_t *addr, uint8_t len)
+uint8_t crc8(const uint8_t *addr, uint8_t len)
 {
 	uint8_t crc = 0;
 
@@ -513,13 +420,13 @@ uint8_t OneWire::crc8(const uint8_t *addr, uint8_t len)
 #endif
 
 #if ONEWIRE_CRC16
-bool OneWire::check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc)
+bool check_crc16(const uint8_t* input, uint16_t len, const uint8_t* inverted_crc, uint16_t crc)
 {
     crc = ~crc16(input, len, crc);
     return (crc & 0xFF) == inverted_crc[0] && (crc >> 8) == inverted_crc[1];
 }
 
-uint16_t OneWire::crc16(const uint8_t* input, uint16_t len, uint16_t crc)
+uint16_t crc16(const uint8_t* input, uint16_t len, uint16_t crc)
 {
 #if defined(__AVR__)
     for (uint16_t i = 0 ; i < len ; i++) {
