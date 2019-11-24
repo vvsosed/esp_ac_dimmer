@@ -24,11 +24,16 @@ void init() {
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
 }
 
-void set_bit(const int bit, bool is_set) {
-    if (is_set)
-        xEventGroupSetBits(events::esp_events_grp, bit);
-    else
-        xEventGroupClearBits(events::esp_events_grp, bit);
+void set_bit( const int bit ) {
+    xEventGroupSetBits(esp_events_grp, bit);
+}
+
+void clear_bit( const int bit ) {
+    xEventGroupClearBits(esp_events_grp, bit);
+}
+
+void wait_for( const int bits, const TickType_t& waitTicks ) {
+    xEventGroupWaitBits(esp_events_grp, bits, false, true, waitTicks);
 }
 
 } // events

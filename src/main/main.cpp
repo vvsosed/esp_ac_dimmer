@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <future>
+//#include <cstring>
+//#include <cstdio>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -16,6 +18,7 @@
 #include "onewire.h"
 #include "Events.h"
 #include "Wifi.h"
+#include "UdpSrv.h"
 
 namespace {
 
@@ -36,6 +39,12 @@ void gpio_task_example(void *arg)
         vTaskDelay( msecToSysTick(1000) );
         gpio_set_level(LedPin, cnt % 2);
     }
+}
+
+void udp_srv_task(void *arg)
+{
+    udp_srv::run();
+    vTaskDelete(NULL);
 }
 
 void IRAM_ATTR setIntrModeClbk (const onewire::IntMode intrMode) {};
@@ -67,7 +76,6 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(ret);
 
     events::init();
-    wifi::init_station();
 
     gpio_config_t io_conf;    
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -77,7 +85,13 @@ extern "C" void app_main()
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
 
-    xTaskCreate(gpio_task_example, "gpio_task_example", 1024, NULL, 10, NULL);
+    xTaskCreate(gpio_task_example, "gpio_task_example", 256, NULL, 10, NULL);
+
+    wifi::init_station();
+    events::wait_connection();
+    udp_srv::init();
+    xTaskCreate(udp_srv_task, "udp_srv_task", 2048, NULL, 10, NULL);
+
     onewire::OneWire ow_inst( setPinModeClbk,
                               readOWPinClbk, 
                               setPinValueClbk, 
@@ -88,7 +102,7 @@ extern "C" void app_main()
     ESP_LOGI(__FUNCTION__, "Start pooling OneWire devices...\n\n\n");
     
     for (int indx = 1; true; indx++) {
-        vTaskDelay( msecToSysTick(3000) );
+        vTaskDelay( msecToSysTick(500) );
         
         std::uint8_t addr[8];
         if ( !ow_inst.search(addr) ) {
@@ -97,73 +111,62 @@ extern "C" void app_main()
             continue;
         }
         
-        ESP_LOGI(__FUNCTION__, "ADDR =[0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X]",
-        addr[0],addr[1],addr[2],addr[3],addr[4],addr[5],addr[6],addr[7]);
-
         if (onewire::OneWire::crc8(addr, 7) != addr[7]) {
             ESP_LOGE(__FUNCTION__, "CRC is not valid!");
             continue;
         }
-        else {
-            ESP_LOGI(__FUNCTION__, "CRC=0x%X is valid!", addr[7]);
-        }
+        
+        char idStr[64];
+        snprintf(idStr, sizeof(idStr), "0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X",
+                 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6]);
+        ESP_LOGI(__FUNCTION__, "ADDR =[%s]", idStr);
 
         std::uint8_t  type_s = 0;
         // the first ROM byte indicates which chip
         switch (addr[0]) {
-            case 0x10:
+        case 0x10:
             ESP_LOGI(__FUNCTION__, "Chip = DS18S20");  // or old DS1820
             type_s = 1;
             break;
-            case 0x28:
+        case 0x28:
             ESP_LOGI(__FUNCTION__, "Chip = DS18B20");
             type_s = 0;
             break;
-            case 0x22:
+        case 0x22:
             ESP_LOGI(__FUNCTION__, "Chip = DS1822");
             type_s = 0;
             break;
-            default:
+        default:
             ESP_LOGI(__FUNCTION__, "Device is not a DS18x20 family device.");
+            continue;
         }
                 
         if ( !ow_inst.reset() ) {
             ESP_LOGW(__FUNCTION__, "1 Presence is absent!");
             continue;
         }
+
         ow_inst.select(addr);
-        ow_inst.write(0x44, 1);        // start conversion, with parasite power on at the end
-        
-        vTaskDelay( msecToSysTick(750) );     // maybe 750ms is enough, maybe not
+        ow_inst.write(0x44, 1); // start conversion, with parasite power on at the end
+        vTaskDelay( msecToSysTick(10) );
         // we might do a ds.depower() here, but the reset will take care of it.
         
         if ( !ow_inst.reset() ) {
             ESP_LOGW(__FUNCTION__, "2 Presence is absent!");
             continue;
         }
+
         ow_inst.select(addr);   
         ow_inst.write(0xBE);         // Read Scratchpad
-        
-        std::uint8_t data[12] = {};
-        for ( int i = 0; i < 9; i++) {           // we need 9 bytes
+        std::uint8_t data[9]; // we need 9 bytes
+        for ( int i = 0; i < sizeof(data); i++) 
             data[i] = ow_inst.read();
-        }
         
-        // we need 9 bytes
-        ESP_LOGI(__FUNCTION__, "Data =[0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X]",
-        data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]);
-
-
-        ESP_LOGI(__FUNCTION__, "Data CRC=0x%X/0x%X", onewire::OneWire::crc8(data, 8), data[8]);
         if (onewire::OneWire::crc8(data, 8) != data[8]) {
             ESP_LOGI(__FUNCTION__, "Bad Data CRC: (calc=0x%X) != (receiv=0x%X)\n", onewire::OneWire::crc8(data, 8), data[8]);
             continue;
         }
-        else {
-            ESP_LOGI(__FUNCTION__, "Data CRC=0x%X", data[8]);
-        }
-        
-        
+               
         // Convert the data to actual temperature
         // because the result is a 16 bit signed integer, it should
         // be stored to an "int16_t" type, which is always 16 bits
@@ -184,10 +187,16 @@ extern "C" void app_main()
             //// default is 12 bit resolution, 750 ms conversion time
         }
 
-
         auto celsius = float(raw) / 16.0;
         auto fahrenheit = celsius * 1.8 + 32.0;
-        ESP_LOGI(__FUNCTION__, " Temperature: Celsius=%0.2f Fahrenheit=%0.2f\n", celsius, fahrenheit);
+        char buf[128];
+        auto respLen = snprintf(
+            buf, 
+            sizeof(buf), 
+            "ID[%s] Temp: Cels=%0.2f Fahr=%0.2f\n", 
+            idStr, celsius, fahrenheit);
+        udp_srv::sendData(buf, respLen);
+        ESP_LOGI(__FUNCTION__, "%s", buf);
     }
 
     ESP_LOGI(TAG, "Restarting now...");
