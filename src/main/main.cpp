@@ -116,6 +116,7 @@ extern "C" void app_main()
         }
         
         char idStr[64];
+        //memset(idStr, 0, sizeof(idStr));
         snprintf(
             idStr, 
             sizeof(idStr), 
@@ -126,11 +127,13 @@ extern "C" void app_main()
         auto tempSens = onewire::TemperatureSensor::create(ow_inst, regNum);
         if ( !tempSens || !tempSens->measureTemperature() ) {
             ESP_LOGI(TAG, "Bad sensor %s", idStr);
+            continue;
         }
 
         auto celsius = tempSens->getCelsius();
         auto fahrenheit = onewire::celsiusToFahrenheit(celsius);
         char buf[128];
+        //memset(buf, 0, sizeof(buf));
         auto respLen = snprintf(
             buf, 
             sizeof(buf), 
