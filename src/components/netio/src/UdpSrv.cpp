@@ -24,13 +24,14 @@ namespace {
     using ClockType = std::chrono::steady_clock;
     using TimepointType = std::chrono::time_point<ClockType>;
 
-    using DiscoveryMessage =  messages::DiscoveryMessage;
+    using DiscoveryMessage =  messages::Discovery;
     using MsgIdType = messages::MsgIdType;
     using BufferType = messages::BufferType;
 
     const char *TAG = "UdpSrv";
     
     BufferType rx_buffer;
+    BufferType tx_buffer;
     int addr_family = AF_INET;
     int ip_protocol = IPPROTO_IP;
     
@@ -84,22 +85,27 @@ void init() {
 bool sendDiscoveryMessage() {
     ESP_LOGI(TAG, "sendDiscoveryMessage");
 
-    sockaddr_in destAddr = {};
-    destAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    destAddr.sin_family = AF_INET;
-    destAddr.sin_port = htons(HOST_PORT);
+    DiscoveryMessage msg = {};
+    msg.devId = common::getCpuId();
+    const auto msgLen = messages::create(tx_buffer, msg);
 
-    decltype(DiscoveryMessage::ID) id = DiscoveryMessage::ID;
-    int sz = sendto(g_sock, &id, sizeof(id), 0, reinterpret_cast<const sockaddr *>(&destAddr), sizeof(destAddr));
-    if (sizeof(id) == sz) {
-        DiscoveryMessage msg = {};
-        msg.devId = common::getCpuId();
-        sz = sendto(g_sock, &msg, sizeof(msg), 0, reinterpret_cast<const sockaddr *>(&destAddr), sizeof(destAddr));
-        if (sizeof(msg) == sz)
+    if (0 < msgLen) {
+        
+        sockaddr_in destAddr = {};
+        destAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        destAddr.sin_family = AF_INET;
+        destAddr.sin_port = htons(HOST_PORT);
+
+        const auto sended = sendto(g_sock, tx_buffer.data(), msgLen, 0, reinterpret_cast<const sockaddr *>(&destAddr), sizeof(destAddr));
+        if (msgLen == sended)
             return true;
-    }
 
-    ESP_LOGE(TAG, "Error occured during sending: errno %d", sz);
+        ESP_LOGE(TAG, "Error occured during sending: errno %d", sended);
+    }
+    else {
+        ESP_LOGE(TAG, "Can't create message");
+    }
+   
     close_socket();
     return false;
 }
@@ -133,7 +139,7 @@ void run() {
                 DiscoveryMessage &msg = reinterpret_cast<DiscoveryMessage &>(rx_buffer[offset]);
                 offset += sizeof(DiscoveryMessage);
                 len -= sizeof(DiscoveryMessage);
-                ESP_LOGI(TAG, "Received discovery message, ip=%s port=%d", toString(sourceAddr.sin_addr).c_str(), sourceAddr.sin_port);
+                ESP_LOGI(TAG, "Received discovery message, devId=%d, ip=%s port=%d", msg.devId, toString(sourceAddr.sin_addr).c_str(), sourceAddr.sin_port);
                 g_clients.emplace(sourceAddr.sin_addr.s_addr, sourceAddr.sin_port);
             }
             default:
