@@ -5,6 +5,8 @@
 
 namespace common {
 
+std::uint32_t getCpuId();
+
 void print_firmware_info();
 
 inline TickType_t msecToSysTick( std::uint32_t xTimeInMs) {

@@ -35,4 +35,4 @@ add_custom_target(monitor
 #	)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(hello-world)
+project(esp_ac_dimmer)

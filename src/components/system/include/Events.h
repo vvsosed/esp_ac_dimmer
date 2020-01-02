@@ -6,6 +6,7 @@
 namespace events {
 
 const int WIFI_CONNECTED_BIT = BIT0;
+const int SRV_CONNECTED_BIT = BIT1;
 
 void init();
 
@@ -17,7 +18,7 @@ void wait_for( const int bits, const TickType_t& waitTicks = portMAX_DELAY );
 
 int get_bit( const int bits );
 
-inline void wait_connection( const TickType_t& waitTicks = portMAX_DELAY ) {
+inline void wait_wifi_connection( const TickType_t& waitTicks = portMAX_DELAY ) {
     wait_for(WIFI_CONNECTED_BIT, waitTicks);
 }
 

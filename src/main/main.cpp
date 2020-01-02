@@ -40,7 +40,12 @@ void gpio_task_example(void *arg)
 
 void udp_srv_task(void *arg)
 {
-    udp_srv::run();
+    while (true) {
+        events::wait_wifi_connection();
+        udp_srv::run();
+        vTaskDelay( common::msecToSysTick(1000) );
+    }
+
     vTaskDelete(NULL);
 }
 
@@ -92,7 +97,6 @@ extern "C" void app_main()
     xTaskCreate(gpio_task_example, "gpio_task_example", 256, NULL, 10, NULL);
 
     wifi::init_station();
-    events::wait_connection();
     udp_srv::init();
     xTaskCreate(udp_srv_task, "udp_srv_task", 2048, NULL, 10, NULL);
 

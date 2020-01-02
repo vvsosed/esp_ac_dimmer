@@ -7,8 +7,23 @@
 
 namespace common {
 
+std::uint32_t getCpuId() {
+    struct {
+        std::uint32_t cpuId;
+        uint8_t additional[6 - sizeof(cpuId)];
+    } mac;
+    if(ESP_OK != esp_efuse_mac_get_default(reinterpret_cast<uint8_t *>(&mac)))
+        return 0;
+
+    mac.cpuId += mac.additional[0];
+    mac.cpuId += mac.additional[1];
+
+    return mac.cpuId;
+}
+
 void print_firmware_info() {
     const char TAG_INFO[] = "Firmware Info: ";
+    ESP_LOGI(TAG_INFO, "Device ID: %d", getCpuId());
     ESP_LOGI(TAG_INFO, "Hardware arch: %s", HARDWARE_ARCH);
     ESP_LOGI(TAG_INFO, "Firmware version: %s", FIRMWARE_VERSION);
     ESP_LOGI(TAG_INFO, "Kernel version: %s", KERNEL_VERSION);
