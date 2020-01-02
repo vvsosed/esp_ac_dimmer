@@ -59,6 +59,13 @@ void IRAM_ATTR setPinValueClbk( const bool pinValue ) {
     gpio_set_level(OWPin, pinValue);
 };
 
+#pragma pack(push, 1) 
+struct TempMsg {
+    std::uint64_t id;
+    float temp_cels;
+};
+#pragma pack(pop)
+
 } // end of private namespace
 
 extern "C" void app_main()
@@ -139,7 +146,10 @@ extern "C" void app_main()
             sizeof(buf), 
             "ID[%s] Temp: Cels=%0.2f Fahr=%0.2f\n", 
             idStr, celsius, fahrenheit);
-        udp_srv::sendData(buf, respLen);
+        TempMsg msg = {};
+        msg.id = regNum.val64;
+        msg.temp_cels = celsius;
+        udp_srv::sendData(reinterpret_cast<char*>(&msg), sizeof(msg));
         ESP_LOGI(__FUNCTION__, "%s", buf);
     }
 

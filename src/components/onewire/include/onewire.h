@@ -73,6 +73,7 @@ struct RegisterNumber {
             std::uint8_t crc;
         };
         #pragma pack(pop)
+        std::uint64_t val64;
     };
 
     std::uint8_t calcCrc() const {
