@@ -12,6 +12,8 @@
 #define EXAMPLE_ESP_WIFI_PASS CONFIG_WIFI_PASSWORD
 #define EXAMPLE_MAX_STA_CONN  CONFIG_MAX_STA_CONN
 
+extern "C" void DefaultInit(wifi_init_config_t *cfg);
+
 namespace wifi {
 
 namespace {
@@ -21,7 +23,8 @@ namespace {
 void init_acess_point() {
     tcpip_adapter_init();
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    wifi_init_config_t cfg;
+    DefaultInit(&cfg);
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     wifi_config_t wifi_config = {};
     std::strcpy(reinterpret_cast<char*>(wifi_config.ap.ssid), EXAMPLE_ESP_WIFI_SSID);
@@ -44,7 +47,8 @@ void init_acess_point() {
 void init_station() {
     tcpip_adapter_init();
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    wifi_init_config_t cfg;
+    DefaultInit(&cfg);
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     wifi_config_t wifi_config = {};
     std::strcpy(reinterpret_cast<char*>(wifi_config.sta.ssid), EXAMPLE_ESP_WIFI_SSID);
